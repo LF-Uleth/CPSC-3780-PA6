@@ -8,36 +8,28 @@
 
 using namespace std;
 
-void send_file(const string& file_path, const string& host, int port) {
+void send_file(const string& file_path, const string& host, int port, bool use_ipv6) {
     int sockfd;
     struct sockaddr_in server_addr_in;
     struct sockaddr_in6 server_addr_in6;
     memset(&server_addr_in, 0, sizeof(server_addr_in));
     memset(&server_addr_in6, 0, sizeof(server_addr_in6));
 
-    //Check if ipv4 or 6
-    struct sockaddr_in sa;
-    struct sockaddr_in6 sa6;
-    bool is_ipv6 = inet_pton(AF_INET6, host.c_str(), &(sa6.sin6_addr)) != 0;
-
-    if (is_ipv6) { //ipv6
+    if (use_ipv6) { //6
         sockfd = socket(AF_INET6, SOCK_STREAM, 0);
-        server_addr_in6.sin6_family = AF_INET6;
+        server_addr_in6.sin6_family = AF_INET6; // set addr
         server_addr_in6.sin6_port = htons(port);
         inet_pton(AF_INET6, host.c_str(), &server_addr_in6.sin6_addr);
         
-    } else { //ipv4 
+        connect(sockfd, (struct sockaddr *)&server_addr_in6, sizeof(server_addr_in6));
+        
+    } else { //4
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        server_addr_in.sin_family = AF_INET;
+        server_addr_in.sin_family = AF_INET; //set addr
         server_addr_in.sin_port = htons(port);
         inet_pton(AF_INET, host.c_str(), &server_addr_in.sin_addr);
-    }
-
-    //connect based on ipv4 or 6
-    if (is_ipv6) {
-        connect(sockfd, (struct sockaddr *)&server_addr_in6, sizeof(server_addr_in6)); //6
-    } else {
-        connect(sockfd, (struct sockaddr *)&server_addr_in, sizeof(server_addr_in)); //4
+        
+        connect(sockfd, (struct sockaddr *)&server_addr_in, sizeof(server_addr_in));
     }
 
     //get file
@@ -49,17 +41,33 @@ void send_file(const string& file_path, const string& host, int port) {
     //send file
     send(sockfd, buffer, bytes_read, 0);
 
-    //close soceket + file
+    //close file and socket
     close(sockfd);
     file.close();
 }
 
 int main(int argc, char* argv[]) {
-    string file_path = argv[2];
-    string host = argv[3];
-    int port = atoi(argv[4]);
+    bool use_ipv6 = false; //default 4
+    string file_path;
+    string host;
+    int port;
+    int i = 1;
+
+   
+    if (string(argv[i]) == "-f") {
+        file_path = argv[++i];  //set file path
+    } 
+   
+    if (string(argv[i]) == "-6") { //check if ipv6
+        use_ipv6 = true;
+        i++;  // Skip the -6 flag
+    }
+
+    // set host + port
+    host = argv[i++];
+    port = atoi(argv[i]);
     
-    send_file(file_path, host, port);
+    send_file(file_path, host, port, use_ipv6);
 
     return 0;
 }
