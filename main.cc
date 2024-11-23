@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
    
     if (string(argv[i]) == "-6") { //check if ipv6
         use_ipv6 = true;
-        i++;  // Skip the -6 flag
+        i++;
     }
 
     // set host + port
